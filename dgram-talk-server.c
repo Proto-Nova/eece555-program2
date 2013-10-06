@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "packetErrorSendTo.h"
 
 #define SERVER_PORT "5432"
 #define MAX_SIZE    1300
@@ -18,8 +19,9 @@
 #define BODY	    '2'
 #define PACKET_TYPE buf[0]
 #define PACKET_NUM  buf[1]
-int
-main(int argc, char *argv[])
+#define PAYLOAD     (char *) &buf + 2
+
+int main(int argc, char *argv[])
 {
 	struct addrinfo         hints;
         struct addrinfo         *rp, *result;
@@ -35,11 +37,10 @@ main(int argc, char *argv[])
         int     file_desc;
         int     len;
         int     retval;
-        char 	last_packet_num = '0';
+        char 	last_packet_num = '9';
         int     file_name_ack	= 0;
 	int     file_name_recv  = 0;
         int     quit            = 0;
-	char    curr_packet_num = 0;
 
 	/* Build address data structure */
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -82,18 +83,13 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	src_addr = (struct sockaddr*) rp->ai_addr;
-<<<<<<< HEAD
-	src_len  = (socklen_t *) rp->ai_addrlen;
-=======
-	src_len  = sizeof src_addr;
->>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
+	src_len  = (socklen_t) rp->ai_addrlen;
 	freeaddrinfo(result);
-	
-	FD_ZERO(&rfds);
-	FD_SET (s, &rfds);
 	
 	while (!file_name_recv)
 	{
+		FD_ZERO(&rfds);
+                FD_SET (s, &rfds);
 		tv.tv_sec  = 5;
 		tv.tv_usec = 0;
 
@@ -116,7 +112,7 @@ main(int argc, char *argv[])
 		}
 		else
 		{
-			if( recvfrom(s, (void *)&buf, sizeof(buf), 0, (struct sockaddr *)src_addr, (socklen_t *) &src_len) == -1 )
+			if( recvfrom(s, (void *)&buf, sizeof(buf), 0, (struct sockaddr *)src_addr, &src_len) == -1 )
 			{
 				perror("dgram-talk-server: recvfrom");
 				printf("BUFFER: %s\n", &buf);
@@ -127,7 +123,12 @@ main(int argc, char *argv[])
 			ack_buffer[0] = ACK; // An ACK packet
 			ack_buffer[1] = PACKET_NUM;
 
-			int tmp = packetErrorSendTo(s, (void *) &ack_buffer, 2, 0, (struct sockaddr *) src_addr, (socklen_t *) &src_len);
+			char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+           		if (getnameinfo((struct sockaddr *) src_addr, src_len, hbuf, sizeof(hbuf), sbuf,
+                       			sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV) == 0)
+              		 printf("host=%s, serv=%s\n", hbuf, sbuf);
+
+			int tmp = packetErrorSendTo(s, (void *) &ack_buffer, 2, 0, (struct sockaddr *) src_addr, src_len);
 			printf("Error Sendto Val: %d\n", tmp);
 				
 			/* If new packet and is of file_name type */
@@ -135,25 +136,37 @@ main(int argc, char *argv[])
 			{
 				file_name = (char *) buf;
 				file_name = file_name + 2;
-<<<<<<< HEAD
-				printf("BUFFER: %s\n", &buf);
-=======
->>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
+				printf("BUFFER: %s\n", (char *) &buf);
 				printf("Recieved Filename: %s\n", file_name);
-				last_packet_num = PACKET_NUM;
 				file_desc = open(file_name, O_RDONLY);
 				file_name_recv = 1;
+				printf("File Desc: %d\n", file_desc);
 			}	
 		}
 	}	
-				
+	
+	last_packet_num = '0';
+	PACKET_TYPE     = BODY;
+	
 	/* Receive and print text */
 	while (!quit)
 	{
+	
+		FD_ZERO(&rfds);
+                FD_SET (s, &rfds);
 		tv.tv_sec  = 0;
 		tv.tv_usec = 300;
+		ssize_t bytes_read = read(file_desc, (void *) &buf[2], (size_t) MAX_SIZE-2); 
+		printf("Bytes Read: %d\n", (int) bytes_read);
 
-		retval = select(s+1, &rfds, NULL,NULL, &tv);
+		if (bytes_read > 0)
+                {
+                	packetErrorSendTo(s, (void *) &buf, bytes_read+2, 0, (struct sockaddr *) src_addr, src_len);
+                	PACKET_NUM      = last_packet_num++;
+			printf("PACKET NUMBER %c\n", PACKET_NUM);
+                }
+		
+		retval		= select(s+1, &rfds, NULL,NULL, &tv);
 
 		if (retval == -1)
 		{
@@ -164,18 +177,20 @@ main(int argc, char *argv[])
 		}
 		else if(retval == 0)
 		{
-		    	quit = 1;
+			perror("dgram-talk-server: timeout\n");
+			close(s);
+			exit(1);
 		}
 		else
 		{
-			if( recvfrom(s, &buf, sizeof(buf), 0, src_addr, src_len) == -1 ){
-				perror("dgram-talk-server: recvfrom");
+			if( recvfrom(s, &buf, sizeof(buf), 0, (struct sockaddr *)src_addr, &src_len) == -1 )
+			{
+				perror("dgram-talk-server: recvfrom\n");
 				close(s);
 				exit(1);
 			}
-		
 		}
-	}
+	}	
 
 	close(s);
 
