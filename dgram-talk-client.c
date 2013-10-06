@@ -97,32 +97,53 @@ main(int argc, char *argv[])
 	
 	while(!file_name_ack)
 	{
+<<<<<<< HEAD
 		/* Set select timeout settings */
 		tv.tv_sec	= 2;
 		tv.tv_usec 	= 300000;
 
 		/* Set Header Values */
+=======
+		tv.tv_sec	= 2;
+		tv.tv_usec 	= 300000;
+>>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
 		PACKET_TYPE 	= FILE_NAME;
 		PACKET_NUM 	= 'O';
 		
 		printf("BUFFER:%s\n", &buf);
+<<<<<<< HEAD
 		printf("FILENAME:%s\n", file_name);
 		packetErrorSendTo(s, &buf, strlen(file_name)+2, 0, (struct sockaddr *)src_addr, src_len);
 
 		retval = select(s+1, &rfds, NULL,NULL, &tv);
 
 		if (retval == -1)		// Error State
+=======
+		packetErrorSendTo(s, &buf, strlen(file_name)+2, 0, (struct sockaddr *)src_addr, src_len);
+
+		retval 		= select(s+1, &rfds, NULL,NULL, &tv);
+
+		if (retval == -1)
+>>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
 		{
 		    	perror("CRASH...\n");
 		    	close(s);
 		    	exit(1);
 		    
 		}
+<<<<<<< HEAD
 		else if(retval == 0)		// Timeout State
 		{
 			printf("RETVAL = 0\n");
 		}
 		else				// Success State
+=======
+		else if(retval == 0)
+		{
+			printf("RETVAL = 0\n");
+		}
+		else
+>>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
 		{
 			if( recvfrom(s, &buf, sizeof(buf), 0, src_addr, src_len) == -1 )
 			{

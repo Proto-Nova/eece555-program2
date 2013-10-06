@@ -82,7 +82,11 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	src_addr = (struct sockaddr*) rp->ai_addr;
+<<<<<<< HEAD
 	src_len  = (socklen_t *) rp->ai_addrlen;
+=======
+	src_len  = sizeof src_addr;
+>>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
 	freeaddrinfo(result);
 	
 	FD_ZERO(&rfds);
@@ -131,7 +135,10 @@ main(int argc, char *argv[])
 			{
 				file_name = (char *) buf;
 				file_name = file_name + 2;
+<<<<<<< HEAD
 				printf("BUFFER: %s\n", &buf);
+=======
+>>>>>>> a3c2d23f5b0ea643c6f170a1a8bae02ef56cef3c
 				printf("Recieved Filename: %s\n", file_name);
 				last_packet_num = PACKET_NUM;
 				file_desc = open(file_name, O_RDONLY);
